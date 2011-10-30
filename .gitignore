@@ -1,0 +1,7 @@
+
+objects.inv
+.buildinfo
+doc/src/_build/doctrees
+*.pyc
+*.pyo
+*~
