@@ -31,7 +31,7 @@ __copyright__ = "Copyright 2009-{0}, Matt Anderson".format(
 __contributors__ = []
 __license__ = "MIT"
 v = __version_info__ = collections.namedtuple(
-    "VersionInfo", "major minor prerel prerelver")(0, 5, "a", 1)
+    "VersionInfo", "major minor prerel prerelver")(0, 5, "a", 2)
 __version__ = "{0}.{1}{2}{3}".format(
     v.major, v.minor,
     v.prerel if v.prerel else "",
@@ -71,9 +71,9 @@ DATASIZE_BYTERANGE = -3
 def _restore_position(io):
     """A helper context manager for working with a filelike object.
 
-    The position in the file on entering the context is restored on exit of the
-    context, so the suite managed by the context is free to move the position as
-    part of its operation.
+    The position in the file on entering the context is restored on exit of
+    the context, so the suite managed by the context is free to move the
+    position as part of its operation.
 
     >>> import StringIO
     >>> io = StringIO.StringIO()
@@ -98,13 +98,14 @@ def _restore_position(io):
 def read_headers(fobj):
     r"""Tries to read RFC822-style headers from a filelike object.
 
-    Returns a :class:`MultiDict`. The filelike object used as input must support
-    the :meth:`seek` method.
+    Returns a :class:`MultiDict`. The filelike object used as input must
+    support the :meth:`seek` method.
 
     If :func:`read_headers` encounters anything unexpected while attempting to
-    read headers, it assumes that what it is reading is actually not a block of
-    headers. It it seeks to the input object's position to where it was when
-    :func:`read_headers` was called, and returns an empty :class:`MultiDict`.
+    read headers, it assumes that what it is reading is actually not a block
+    of headers. It it seeks to the input object's position to where it was
+    when :func:`read_headers` was called, and returns an empty
+    :class:`MultiDict`.
 
     >>> import StringIO
     >>> import pprint
@@ -142,7 +143,8 @@ def read_headers(fobj):
             abort = False
             break
         elif line[0].isspace():
-            if not key: break
+            if not key:
+                break
             headers[key] += ' {0}'.format(line.strip())
         else:
             try:
@@ -190,6 +192,8 @@ def read_data_chunked(fobj):
     return ''.join(chunks)
 
 def read_data_byterange(fobj):
+    """Read message data of content-type 'multipart/byteranges'.
+    """
     # How often would we need this?  I've never encountered it.
     raise NotImplementedError()
 
@@ -224,7 +228,8 @@ class RequestUriNotSet(HttpMessageException): pass
 # Helper Class: SocketReadfile
 #======================================================================
 class SocketReadfile(object):
-    """A fully buffered file-like object which provides read access to a socket.
+    """A fully buffered file-like object which provides read access to a
+    socket.
 
     This wraps a socket and provides read access to it as if it were a file.
     It buffers the socket's data lazily as you try to :func:`read` the data,
@@ -243,7 +248,7 @@ class SocketReadfile(object):
     recv_size = 1024
     timeout = None
 
-    def _buffer_callback(self, bytes):
+    def _buffer_callback(self, data):
         pass
 
     def __init__(self, sock, buffer_callback=None):
@@ -286,7 +291,7 @@ class SocketReadfile(object):
             while self._buffer_size < pos:
                 if not self._socket_ready(timeout):
                     break
-                size = min(self.recv_size, pos-self._buffer_size)
+                size = min(self.recv_size, pos - self._buffer_size)
                 data = self._sock.recv(size)
                 if not data:
                     self._become_pure_proxy()
@@ -334,9 +339,9 @@ class SocketReadfile(object):
                 incoming = self.socket_peek(self.recv_size)
                 nl_pos = incoming.find('\n')
                 if nl_pos == -1:
-                    self._buffer_to(self._buffer_size+self.recv_size)
+                    self._buffer_to(self._buffer_size + self.recv_size)
                 else:
-                    self._buffer_to(self._buffer_size+nl_pos+1)
+                    self._buffer_to(self._buffer_size + nl_pos + 1)
                     break
         return io.readline()
 
@@ -375,8 +380,8 @@ class SocketReadfile(object):
 class Url(object):
     """A parsed url, similar to :class:`urlparse.ParseResult`.
     
-    Url objects can be edited, and transformed back into textual representations
-    by calling str() on the url object.
+    Url objects can be edited, and transformed back into textual
+    representations by calling str() on the url object.
     """
     @property
     def username(self):
@@ -450,14 +455,18 @@ class Url(object):
 #======================================================================
 class _KeyValue(object):
     # a helper class for the MultiDict
-    key = property(lambda self:self._key)
+    key = property(lambda self: self._key)
+
     def __init__(self, key, value):
         self._key, self.value = key, value
+
     def __repr__(self):
         return "{0}({1!r}, {2!r})".format(
             type(self).__name__, self.key, self.value)
+
     def __iter__(self):
-        yield self.key; yield self.value
+        yield self.key
+        yield self.value
 
 
 class Ident(collections.namedtuple("Ident", "key index")):
@@ -585,7 +594,8 @@ class MultiDict(collections.MutableMapping):
         if self._is_ident(ident):
             key, index = ident
         elif self.strict_indexing:
-            raise KeyError("{0} is not a valid (key, index) pair".format(ident))
+            raise KeyError(
+                "{0} is not a valid (key, index) pair".format(ident))
         else:
             key = ident
             index = 0 if not self._len(key) else -1
@@ -601,7 +611,7 @@ class MultiDict(collections.MutableMapping):
         self.update(items)
 
     def _repritems(self, pad=2):
-        tmpl = " "*pad + "{0!r}"
+        tmpl = " " * pad + "{0!r}"
         return ",\n".join(tmpl.format(item) for item in self.items())
 
     def __repr__(self):
@@ -727,7 +737,7 @@ class Message(MultiDict):
             "{key}: {value}".format(key=k, value=v)
             for ((k, i), v) in self.iteritems())
         return "{head}{sep}{body}".format(
-            head=head, sep=CRLF+CRLF, body=self.data)
+            head=head, sep=CRLF + CRLF, body=self.data)
 
     def __iter__(self):
         raise TypeError(
@@ -841,8 +851,9 @@ class RequestMessage(HttpMessage):
         netloc = hostname = self.get('hostname', request_url.hostname) or ''
         if request_url.port:
             netloc = '{0}:{1}'.format(hostname, request_url.port)
-        return Url(urlparse.urlunparse((self.scheme, netloc, request_url.path,
-            request_url.params, request_url.query_string, request_url.fragment)))
+        return Url(urlparse.urlunparse([
+            self.scheme, netloc, request_url.path, request_url.params,
+            request_url.query_string, request_url.fragment]))
 
     def calculate_expected_datasize(self):
         if self.method.upper() in self._no_data_methods:
@@ -869,7 +880,8 @@ class RequestMessage(HttpMessage):
         The request must include a ``request_uri`` attribute.
         """
         if not self.request_uri:
-            raise RequestUriNotSet("cannot fetch_response() {0!r}".format(self))
+            raise RequestUriNotSet(
+                "cannot fetch_response() {0!r}".format(self))
         url = Url(self.request_uri)
         if url.hostname and 'host' not in self:
             self['host'] = url.hostname
@@ -898,9 +910,9 @@ class RequestMessage(HttpMessage):
             'SERVER_NAME': self.get('host', ''),
             'SERVER_PORT': url.port,
             'CONTENT_TYPE': self.get('content-type', ''),
-            'CONTENT_LENGTH': self.get('content-length', ''),}
+            'CONTENT_LENGTH': self.get('content-length', ''), }
         for key in self.iterkeys():
-            envkey = 'HTTP_{0}'.format(key.replace('-','_').upper())
+            envkey = 'HTTP_{0}'.format(key.replace('-', '_').upper())
             environ[envkey] = self[key]
         environ['wsgi.input'] = stringio.StringIO(self.data)
         environ.update(kw)
@@ -934,5 +946,3 @@ class ResponseMessage(HttpMessage):
         self.http_version = line_parts[0]
         self.status_code = int(line_parts[1])
         self.reason_phrase = ' '.join(line_parts[2:])
-    
-
